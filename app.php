@@ -9,6 +9,8 @@ require 'vendor/autoload.php';
 use Symfony\Component\HttpFoundation\Response;
 $app = new \Silex\Application();
 
+//$app['debug'] = true;
+
 $app->get('/', function () use ($app) {
   return $app->sendFile('static/index.html');
 });
@@ -28,8 +30,8 @@ $app->get('/hello/{name}', function ($name) use ($app) {
 $app->get('/parks', function () use ($app) {
   $db_connection = getenv('OPENSHIFT_MONGODB_DB_URL') ? getenv('OPENSHIFT_MONGODB_DB_URL') . getenv('OPENSHIFT_APP_NAME') : "mongodb://localhost:27017/";
   $client = new MongoClient($db_connection);
-  $db = $client->selectDB(getenv('OPENSHIFT_APP_NAME'));
-  $parks = new MongoCollection($db, 'parks');
+  $db = $client->selectDB(getenv('OPENSHIFT_APP_NAME') ? getenv('OPENSHIFT_APP_NAME') : "test");
+  $parks = new MongoCollection($db, 'tcl_metro_a');
   $result = $parks->find();
 
   $response = "[";
@@ -44,8 +46,8 @@ $app->get('/parks', function () use ($app) {
 $app->get('/parks/within', function () use ($app) {
   $db_connection = getenv('OPENSHIFT_MONGODB_DB_URL') ? getenv('OPENSHIFT_MONGODB_DB_URL') . getenv('OPENSHIFT_APP_NAME') : "mongodb://localhost:27017/";
   $client = new MongoClient($db_connection);
-  $db = $client->selectDB(getenv('OPENSHIFT_APP_NAME'));
-  $parks = new MongoCollection($db, 'parks');
+  $db = $client->selectDB(getenv('OPENSHIFT_APP_NAME') ? getenv('OPENSHIFT_APP_NAME') : "test");
+  $parks = new MongoCollection($db, 'tcl_metro_a');
 
   #clean these input variables:
   $lat1 = floatval($app->escape($_GET['lat1']));
@@ -57,6 +59,7 @@ $app->get('/parks/within', function () use ($app) {
        is_float($lon1) && is_float($lon2))){
     $app->json(array("error"=>"lon1,lat1,lon2,lat2 must be numeric values"), 500);
   }else{
+    $parks->ensureIndex(array( 'pos' => '2d'));
     $result = $parks->find( 
       array( 'pos' => 
         array( '$within' => 
