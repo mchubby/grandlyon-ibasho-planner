@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Grandlyon-ibasho-planner - A PHP+Silex+MongoDB+Leaflet/OpenStreetMap website by mchubby</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Grandlyon-ibasho-planner - A PHP+Silex+MongoDB+Leaflet/OpenStreetMap website</h1>
+          <h2>A variation on the https://github.com/openshift-quickstart/silex-mongodb-parks example.</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/mchubby/grandlyon-ibasho-planner/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/mchubby/grandlyon-ibasho-planner/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/mchubby/grandlyon-ibasho-planner" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h2>
+<a name="project-rationale" class="anchor" href="#project-rationale"><span class="octicon octicon-link"></span></a>Project Rationale</h2>
+
+<p>This project is a fork from <a href="/openshift-quickstart/silex-mongodb-parks">openshift-quickstart/silex-mongodb-parks</a>. It intends to try implementing several features on top of the existing AJAX-based OpenStreetMap slippy map.</p>
+
+<p><strong>Namely:</strong></p>
+
+<p>☑ Only populates MongoDB on first deployment</p>
+
+<p>☑ Nice, customizable markers with <a href="https://github.com/lvoogdt/Leaflet.awesome-markers">lvoogdt/Leaflet.awesome-markers</a> and the awesome <a href="https://github.com/fortawesome/Font-Awesome">fortawesome/Font-Awesome</a></p>
+
+<p>☐ Marker insertion using <a href="https://github.com/aratcliffe/Leaflet.contextmenu">aratcliffe/Leaflet.contextmenu</a></p>
+
+<p>☐ Better tweaked for more Heroku deployment friendliness</p>
+
+<hr><h3>
+<a name="deploying-to-openshift-using-the-rhc-gem-in-cli" class="anchor" href="#deploying-to-openshift-using-the-rhc-gem-in-cli"><span class="octicon octicon-link"></span></a>Deploying to <strong>Openshift</strong> using the <code>rhc</code> gem in CLI</h3>
+
+<pre><code>$ rhc app create tclmap php-5.4 mongodb-2 --from-code=https://github.com/mchubby/grandlyon-ibasho-planner
+</code></pre>
+
+<h3>
+<a name="deploying-to-redhat-openshift-through-the-web-interface" class="anchor" href="#deploying-to-redhat-openshift-through-the-web-interface"><span class="octicon octicon-link"></span></a>Deploying to RedHat <strong>Openshift</strong> through the web interface</h3>
+
+<p>Visit <a href="https://openshift.redhat.com/app/console/application_type/custom?cartridges%5B%5D=php-5.4&amp;cartridges%5B%5D=mongodb-2&amp;name=tclmap&amp;initial_git_url=https%3A%2F%2Fgithub.com%2Fmchubby%2Fgrandlyon-ibasho-planner.git">https://openshift.redhat.com/app/console/application_type/custom?cartridges%5B%5D=php-5.4&amp;cartridges%5B%5D=mongodb-2&amp;name=tclmap&amp;initial_git_url=https%3A%2F%2Fgithub.com%2Fmchubby%2Fgrandlyon-ibasho-planner.git</a></p>
+
+<hr><h3>
+<a name="deploying-to-heroku-work-in-progress" class="anchor" href="#deploying-to-heroku-work-in-progress"><span class="octicon octicon-link"></span></a>Deploying to <strong>Heroku</strong> (work in progress)</h3>
+
+<h4>
+<a name="add-ext-mongo-to-composerjson" class="anchor" href="#add-ext-mongo-to-composerjson"><span class="octicon octicon-link"></span></a>Add ext-mongo to composer.json</h4>
+
+<pre><code>{
+    "require": {
+        "ext-mongo": "*",
+        "silex/silex": "~1.1"
+    }
+}
+</code></pre>
+
+<h4>
+<a name="create-procfile-at-project-root" class="anchor" href="#create-procfile-at-project-root"><span class="octicon octicon-link"></span></a>Create Procfile at project root</h4>
+
+<pre><code> web: vendor/bin/heroku-php-nginx -C nginx_heroku.conf
+
+</code></pre>
+
+<h4>
+<a name="create-nginx_herokuconf-at-project-root" class="anchor" href="#create-nginx_herokuconf-at-project-root"><span class="octicon octicon-link"></span></a>Create nginx_heroku.conf at project root</h4>
+
+<pre><code>
+location ~ ^(/(?:css|js|vendor).*)$ {
+    try_files /static$1 @parksrewrite;
+}
+
+location @parksrewrite {
+    # rewrite all to app.php
+    rewrite ^(.*)$ /app.php/$1 last;
+}
+
+location / {
+    # rewrite all to app.php
+    rewrite ^(.*)$ /app.php/$1 last;
+}
+
+location ~ ^/(app|app_dev|config)\.php(/|$) {
+    fastcgi_pass heroku-fcgi;
+    fastcgi_split_path_info ^(.+\.php)(/.*)$;
+    include fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_param HTTPS off;
+}
+</code></pre>
+
+<h4>
+<a name="create-app-in-heroku-with-php-5-and-any-mongo-addon" class="anchor" href="#create-app-in-heroku-with-php-5-and-any-mongo-addon"><span class="octicon octicon-link"></span></a>Create app in Heroku with php-5 and any Mongo addon</h4>
+
+<p>You may do this either with the web frontend or the <code>heroku</code> toolbelt.</p>
+
+<h4>
+<a name="import-tcl_metro_line_ajson-to-your-mongdb-provider-using-cli" class="anchor" href="#import-tcl_metro_line_ajson-to-your-mongdb-provider-using-cli"><span class="octicon octicon-link"></span></a>Import <code>tcl_metro_line_a.json</code> to your MongDB provider using CLI:</h4>
+
+<pre><code>$ mongoimport --db mongolab_dbname_here --collection tcl_metro_a --host mongolab_dbhost_here --port mongolab_dbport_here --username mongolab_username_here --password mongolab_password_here --type json --file tcl_metro_line_a.json
+</code></pre>
+
+<ul>
+<li>tweak all .php's for MongoDB connection strings / database / collections</li>
+</ul><h5>
+<a name="deploy-to-heroku-in-toolbelt" class="anchor" href="#deploy-to-heroku-in-toolbelt"><span class="octicon octicon-link"></span></a>Deploy to Heroku in toolbelt:</h5>
+
+<pre><code>$ git clone git@heroku.com:heroku_app_name.git -o heroku &amp;&amp; cd heroku_app_name
+$ git remote add upstream -m master https://github.com/mchubby/grandlyon-ibasho-planner.git
+$ git pull -s recursive -X theirs upstream master
+
+(overwrite with your own changed files)
+$ git add .
+$ git commit -m "Initial commit before deploying"
+
+$ git push heroku master
+</code></pre>
+
+<h4>
+<a name="profit" class="anchor" href="#profit"><span class="octicon octicon-link"></span></a>Profit!</h4>
+
+<p>Finally you can visit <code>heroku_app_name</code>.herokuapp.com/ in your browser and (hopefully) enjoy!</p>
+
+<p>Many thanks to <a href="https://github.com/ryanj" class="user-mention">@ryanj</a> for his great example!</p>
+
+<h2>
+<a name="note-original-readme-follows" class="anchor" href="#note-original-readme-follows"><span class="octicon octicon-link"></span></a>Note: Original README follows</h2>
+
+<hr><h1>
+<a name="map-of-us-national-parks" class="anchor" href="#map-of-us-national-parks"><span class="octicon octicon-link"></span></a>Map of US National Parks</h1>
+
+<p><em>powered by Silex, PHP, MongoDB, and Leaflet maps</em></p>
+
+<p>To deploy a clone of this application using the <a href="http://rubygems.org/gems/rhc"><code>rhc</code> command line tool</a>:</p>
+
+<pre><code>rhc app create parks php-5.4 mongodb-2 --from-code=https://github.com/openshift-quickstart/silex-mongodb-parks.git
+</code></pre>
+
+<p>Or <a href="https://openshift.redhat.com/app/console/application_type/custom?cartridges%5B%5D=php-5.4&amp;cartridges%5B%5D=mongodb-2&amp;initial_git_url=https%3A%2F%2Fgithub.com%2Fopenshift-quickstart%2Fsilex-mongodb-parks.git">link to a web-based clone+deploy</a> on <a href="http://OpenShift.com">OpenShift Online</a> or on <a href="http://openshift.github.io">your own OpenShift cloud</a>: </p>
+
+<pre><code>https://openshift.redhat.com/app/console/application_type/custom?cartridges%5B%5D=php-5.4&amp;cartridges%5B%5D=mongodb-2&amp;initial_git_url=https%3A%2F%2Fgithub.com%2Fopenshift-quickstart%2Fsilex-mongodb-parks.git
+</code></pre>
+
+<p>A demo is available at: <a href="http://phparks-shifter.rhcloud.com/">http://phparks-shifter.rhcloud.com/</a></p>
+
+<h2>
+<a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h2>
+
+<p>This code is dedicated to the public domain to the maximum extent permitted by applicable law, pursuant to CC0 (<a href="http://creativecommons.org/publicdomain/zero/1.0/">http://creativecommons.org/publicdomain/zero/1.0/</a>)</p>
+        </section>
+
+        <footer>
+          Grandlyon-ibasho-planner - A PHP+Silex+MongoDB+Leaflet/OpenStreetMap website is maintained by <a href="https://github.com/mchubby">mchubby</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
