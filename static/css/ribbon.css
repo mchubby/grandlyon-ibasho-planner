@@ -51,3 +51,8 @@
     box-shadow:4px 4px 10px rgba(0,0,0,0.8);
   }
 }
+@media screen and (max-width: 799px) and (orientation: portrait) {
+  #fossribbon{
+    display:none;
+  }
+}

@@ -3,14 +3,15 @@
 <head>
   <title>Slippy Map of Grand Lyon Public Transport</title>
     <link rel="stylesheet" href="css/ribbon.css" />
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.css" />
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
   <!--[if lte IE 8]>
-      <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.ie.css" />
+      <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.ie.css" />
   <![endif]-->
   <script src="//code.jquery.com/jquery-2.0.0.min.js"></script>
   <!-- <link href='http://fonts.googleapis.com/css?family=Milonga' rel='stylesheet' type='text/css'> -->
-  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
   <link rel="stylesheet" href="vendor/Leaflet.awesome-markers-2.0-develop/dist/leaflet.awesome-markers.css">
+  <link rel="stylesheet" href="vendor/Leaflet.contextmenu-master/dist/leaflet.contextmenu.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> <style type="text/css">
     body {
         padding: 0;
@@ -49,24 +50,110 @@
         font-size: .9em;
         text-decoration: none;
     }
+
+    .button-ctr {
+        min-width: 200px;
+        text-align: center;
+    }
+    .button {
+        display: inline-block;
+        margin-top: 10px;
+        margin-bottom: 0;
+        padding: 5px 8px;
+        text-align: center;
+
+        border: 0 none;
+        border-radius-width: 5px;
+
+        font-family: "Helvetica Neue",Arial,Helvetica,sans-serif;
+        font-size: 9pt;
+        font-weight: bold;
+        line-height: 1.1em;
+        text-transform: none;
+        color: #FFFFFF;
+        cursor: pointer;
+        transition: all 0.3s ease 0s;
+    }
+    .button.red {
+      background: none repeat scroll 0 0 #e0645c;
+      color: white;
+    }
+    .button.red:hover {
+      background: none repeat scroll 0 0 #999999;
+      color: white;
+    }
+    .button.dark {
+      background: none repeat scroll 0 0 #444444;
+      color: white;
+    }
+    .button.dark:hover {
+      background: none repeat scroll 0 0 #2db6cf;
+      color: white;
+    }
+    .button.light {
+      background: none repeat scroll 0 0 #999999;
+      color: white;
+    }
+    .button.light:hover {
+      background: none repeat scroll 0 0 #444444;
+      color: white;
+    }
+    .button.green {
+      background: none repeat scroll 0 0 #46b98a;
+      color: white;
+    }
+    .button.green:hover {
+      background: none repeat scroll 0 0 #2db6cf;
+      color: white;
+    }
+    .button.blue {
+      background: none repeat scroll 0 0 #2db6cf;
+      color: white;
+    }
+    .button.blue:hover {
+      background: none repeat scroll 0 0 #444444;
+      color: white;
+    }
  
     #map { z-index: 1;}
-    #title { z-index: 2; position: absolute; left: 10px; }
   </style>
  
 </head>
 <body>
-  <h1 id="title" style="display:none">National Parks</h1>
   <div id="map"></div>
-  <script src="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.js"></script>
+  <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
   <script src="vendor/Leaflet.awesome-markers-2.0-develop/dist/leaflet.awesome-markers.js"></script>
+  <script src="vendor/Leaflet.contextmenu-master/dist/leaflet.contextmenu-src.js"></script>
   <script>
+//#jquery dep here
+    $.ajaxSetup({
+        beforeSend: function(jqXHR, settings) {
+            jqXHR.url = settings.url;
+        }
+    });
+    var isPortrait = screen.width<screen.height? 1 : 0;
+    var mapquest_open = L.tileLayer('http://otile{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.jpg', {
+        subdomains: '1234',
+        maxZoom : 18,
+		attribution : ['Imagery &copy; <a href="http://developer.mapquest.com/web/info/terms-of-use">Mapquest</a> &mdash; ' +
+            'Map data &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+            
+            '&copy; <a href="http://developer.mapquest.com/web/info/terms-of-use">Mapquest</a> &mdash; Map data &copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
+            ][isPortrait]
+    });
     var osm = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
-        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+        attribution: ['Map data &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors (ODbL) &mdash; ' +
+            'Cartography in Map Tiles &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> (CC BY-SA)',
+            
+            '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> (ODbL / CC BY-SA license)'
+            ][isPortrait]
     });
-    var mapbox_attr_str = 'Imagery from <a href="http://mapbox.com/about/maps/">MapBox</a> &mdash; ' +
-         'Map data &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    var mapbox_attr_str = ['Imagery from <a href="http://mapbox.com/about/maps/">MapBox</a> &mdash; ' +
+         'Map data &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+         
+         '&copy; <a href="http://mapbox.com/about/maps/">MapBox</a> &mdash; Map data &copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
+         ][isPortrait];
     var mapbox_basemap = L.tileLayer('http://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png', {
         id: 'examples.map-9ijuk24y',
         attribution: mapbox_attr_str
@@ -75,16 +162,42 @@
         id: 'examples.map-20v6611k',
         attribution: mapbox_attr_str
     });
+    var thunderforest_attr_str = ['Imagery &copy; <a href="http://www.thunderforest.com/">Thunderforest</a> &mdash; ' +
+         'Map data &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+         
+         '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a> &mdash; Map data &copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
+         ][isPortrait]
+    var thunderforest_transport = L.tileLayer('http://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png', {
+        attribution: thunderforest_attr_str
+    });
+    var thunderforest_landscape = L.tileLayer('http://{s}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png', {
+        attribution: thunderforest_attr_str
+    });
     var markerLayerGroup = new L.layerGroup();
 
     var baseLayers = {
-        "Open<b>Street</b>Map": osm,
-        "MapBox -Base Map-": mapbox_basemap,
+        "MapQuest-OSM": mapquest_open,
+        "ThunderForest -T-": thunderforest_transport,
+        //"ThunderForest -L-": thunderforest_landscape,
+        "OpenStreetMap": osm,
+        //"MapBox -Base Map-": mapbox_basemap,
         "MapBox -Grey Map-": mapbox_greymap
     };
     var poiLayers = {
         "TCL M&eacute;tro A": markerLayerGroup
     };
+    
+    var serversideMarkers = []
+    var addPendingMarkers = []
+    function removeByValue(arr, val) {
+        for(var i=0; i<arr.length; i++) {
+            if(arr[i] == val) {
+                arr.splice(i, 1);
+                break;
+            }
+        }
+    }
+    var layergroup_ssMarkers = null, layergroup_apMarkers = null;
     
     var InfoControl = L.Control.extend({
         options: {
@@ -106,10 +219,10 @@
         },
         
         _renderlink: function (info) {
+//#jquery dep here
             var link = $('<span></span>').text(info.name).text();
             if (info.wiki) {
-//#jquery dep here
-                var node = $('<a></a>').attr('alt', info.name).attr('href', '//en.wikipedia.org/wiki/' + info.wiki).text(info.name);
+                var node = $('<a target="_blank"></a>').attr('alt', info.name).attr('href', '//en.wikipedia.org/wiki/' + info.wiki).text(info.name);
                 var parent = $('<div></div>').html(node);
                 link = parent.html();
             }
@@ -118,13 +231,118 @@
     });
     var infowidget = new InfoControl();
 
+    var redIcon = L.AwesomeMarkers.icon({prefix: 'fa',
+      icon: 'anchor',
+      spin: false,
+      markerColor: 'cadetblue'
+    });
+    var tmpIcon = L.AwesomeMarkers.icon({prefix: 'fa',
+      icon: 'clock-o',
+      spin: false,
+      markerColor: 'orange'
+    });
+    var addedIcon = L.AwesomeMarkers.icon({prefix: 'fa',
+      icon: 'thumb-tack',
+      spin: false,
+      markerColor: 'orange'
+    });
+
+    var onPlaceMarkerCtxMenuClicked = function (e) {
+        var mk = 
+        L.marker(e.latlng, {
+            draggable: true,
+            icon: addedIcon,
+            committed: false
+        })
+        .bindPopup("<strong>Drag &amp; Place Marker</strong><div class='button-ctr'>" + 
+            "<div class='btn-submit button green'>Done!</div> " + 
+            "<div class='btn-cancel button light'>Dismiss Marker</div>" +
+            "</div>", {closeButton:false, closeOnClick:false, className: 'confirm-popup'})
+        .once('add', function (e) {
+            e.target.openPopup();
+        })
+        .on('popupopen', function (e) {
+//#jquery dep here
+            $('.btn-submit', e.popup._container).on('click', function () {
+                var $this = $(this)
+                $this.text("Saving...");
+                var sourceMarker = e.popup._source;
+                var c = sourceMarker.getLatLng()
+                url = "add/" + c.lat + "/" + c.lng;
+                $.get(url, "json", {timeout: 10})
+                .done( function(data, textStatus, jqXHR) {
+                    $this.text("Saved OK!");
+                    $this.css("color", 'blue');
+                    sourceMarker.options.committed = true;
+                    sourceMarker.dragging.disable();
+                    sourceMarker.setIcon(tmpIcon);
+                    sourceMarker.closePopup = sourceMarker._real_ClosePopup;
+                    if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
+                      sourceMarker.options.nodeInfo = data;
+                      sourceMarker.closePopup();
+                      sourceMarker.bindPopup("<b>Marker:</b> " + data.mta_title)
+                    } else {
+                      sourceMarker.closePopup();
+                    }
+                })
+                .fail( function(jqXHR, textStatus, errorThrown) {
+                    $this.text("Retry ("+textStatus+"/"+jqXHR.status+")");
+                    if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
+                      try {
+                        var respObj = $.parseJSON(jqXHR.responseText);
+                        if(respObj.error) {
+                          $this.parent().append($("<div></div>").html(respObj.error));
+                        }
+                      } catch(e) {
+                      }
+                    }
+                    $this.css("color", 'red');
+                })
+            })
+            $('.btn-cancel', e.popup._container).one('click', function () {
+              var sourceMarker = e.popup._source;
+              sourceMarker.closePopup = sourceMarker._real_ClosePopup;
+              sourceMarker.closePopup();
+              if (!('committed' in sourceMarker.options) || !sourceMarker.options.committed) {
+                removeByValue(addPendingMarkers, sourceMarker);
+                redrawMarkerLayers('pending');
+              }
+            })
+        })
+        .on('dragstart', function (e) {
+//#jquery dep here
+            $('.confirm-popup').each( function(i, el) {
+                L.DomUtil.setOpacity(el, 0.1);
+            } );
+        })
+        .on('dragend', function (e) {
+            e.target.openPopup();  // when popup externally closed (e.g. another popup)
+//#jquery dep here
+            $('.confirm-popup').each( function(i, el) {
+                L.DomUtil.setOpacity(el, 1);
+            } );
+            //alert(e.target.getLatLng());
+        });
+        mk._real_ClosePopup = mk.closePopup;
+        mk.closePopup = function() {return this;};        
+        
+        addPendingMarkers.push(mk);
+        redrawMarkerLayers('pending')
+    };
+
     var map = L.map('map', {
         center: [45.757, 4.875],
-        zoom: 14,
-        layers: [osm, markerLayerGroup],
-        zoomControl: false
+        zoom: 14 + ((screen.width<800)? -1 : 0) + (isPortrait? -1 : 0),
+        layers: [mapquest_open, markerLayerGroup],
+        zoomControl: false,
+        contextmenu: true,
+        contextmenuItems: [{
+          text: 'Place marker',
+          callback: onPlaceMarkerCtxMenuClicked
+        }],
+        contextmenuAnchor: L.Browser.touch? [-25, -50] : [0,0]
     });
-    L.control.layers(baseLayers, poiLayers, {position: 'bottomright', collapsed: false}).addTo(map);
+    L.control.layers(baseLayers, poiLayers, {position: 'bottomright', collapsed: L.Browser.mobile}).addTo(map);
     L.control.scale().addTo(map);
     map.addControl(infowidget);
     map.addControl(new L.Control.Zoom())
@@ -132,51 +350,67 @@
 
 
     function getPins(e){
-      bounds = map.getBounds();
-      url = "parks/within?lat1=" + bounds.getSouthWest().lat + "&lon1=" + bounds.getSouthWest().lng + "&lat2=" + bounds.getNorthEast().lat + "&lon2=" + bounds.getNorthEast().lng;
-      $.get(url, pinTheMap, "json")
-    }
-
-            var set1_Simul = [{
-                pos: [4.88, 45.75],
-                name: "ExampleFoo"
-            }];
-            function whenReadyStatic_Simul(e){
-                pinTheMap(set1_Simul);
-            }
-            function getPins_Simul(e){
-              set1_Simul.push({
-                pos: [4.86, 45.73],
-                name: "ExampleBar"
-              });
-              pinTheMap(set1_Simul);
-            }
-
-    function pinTheMap(data){
-      //clear the current pins
-      markerLayerGroup.clearLayers();
- 
-      var redIcon = L.AwesomeMarkers.icon({
-        prefix: 'fa',
-        icon: 'anchor',
-        spin: false,
-        markerColor: 'electricblue'
+      var bounds = map.getBounds();
+      var georestr = "within?lat1=" + bounds.getSouthWest().lat + "&lon1=" + bounds.getSouthWest().lng + "&lat2=" + bounds.getNorthEast().lat + "&lon2=" + bounds.getNorthEast().lng;
+      var url1 = "parks/"+georestr;
+      var url2 = "list/"+ georestr;
+//#jquery dep here
+      $.get(url1, "json")
+      .done(function(parks) {
+        populateMarkerLayers({serverside: parks});
+        redrawMarkerLayers('serverside');
       });
-      //add the new pins
-      var markerArray = new Array(data.length)
-      for (var i = 0; i < data.length; i++){
-        park = data[i];
-        markerArray[i] = L.marker([park.pos[1], park.pos[0]], {icon: redIcon, nodeInfo: park})
-          .bindPopup("<b>Marker:</b> " + park.name)
-          .on('mouseover', function(e) {
-            infowidget.update(this.options.nodeInfo);
-          });  // use .on('mouseout') to clear info if needed
-        park = null
+      
+      if (addPendingMarkers.length == 0) { // do not overwrite ondrag if pending markers have been placed
+        $.get(url2, "json")
+        .done(function(list) {
+          populateMarkerLayers({pending: list});
+          redrawMarkerLayers('pending');
+        });
       }
-markerArray[i] = L.marker(map.options.center);
-      markerLayerGroup.addLayer(L.layerGroup(markerArray));
+      
     }
 
+    function populateMarkerLayers(layerdata){
+      if ('serverside' in layerdata) {
+        serversideMarkers = new Array(layerdata.serverside.length)
+        for (var i = 0; i < layerdata.serverside.length; i++){
+          var ssinfo = layerdata.serverside[i];
+          serversideMarkers[i] = L.marker([ssinfo.pos[1], ssinfo.pos[0]], {icon: redIcon, nodeInfo: ssinfo})
+            .bindPopup("<b>Marker:</b> " + ssinfo.name)
+            .on('mouseover', function(e) {
+              infowidget.update(this.options.nodeInfo);
+            });  // use .on('mouseout') to clear info if needed
+        }
+serversideMarkers[i] = L.marker(map.options.center);
+      }
+      if ('pending' in layerdata) {
+        addPendingMarkers = new Array(layerdata.pending.length)
+        for (var i = 0; i < layerdata.pending.length; i++){
+          var customInfo = layerdata.pending[i];
+          addPendingMarkers[i] = L.marker([customInfo.pos[1], customInfo.pos[0]], {icon: tmpIcon, nodeInfo: customInfo, committed: true})
+            .bindPopup("<b>Marker:</b> " + customInfo.mta_title)
+        }
+      }
+    }
+    
+    function redrawMarkerLayers(layertype) {
+      //clear the current pins
+      //markerLayerGroup.clearLayers();
+      if (layertype === undefined || layertype == 'serverside') {
+        if (layergroup_ssMarkers)
+          markerLayerGroup.removeLayer(layergroup_ssMarkers);
+        markerLayerGroup.addLayer(layergroup_ssMarkers = L.layerGroup(serversideMarkers));
+      }
+      
+      if (layertype === undefined || layertype == 'pending') {
+        if (layergroup_apMarkers)
+          markerLayerGroup.removeLayer(layergroup_apMarkers);
+        markerLayerGroup.addLayer(layergroup_apMarkers = L.layerGroup(addPendingMarkers));
+      }
+    }
+
+    redrawMarkerLayers()
     map.on('dragend', getPins);
     map.on('zoomend', getPins);
     map.whenReady(getPins)
