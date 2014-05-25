@@ -1,6 +1,33 @@
 Changelog
 =========
 
+1.2.0 (2014-03-29)
+------------------
+
+* Allowed disabling the boot logic of MonologServiceProvider
+* Reverted "convert attributes on the request that actually exist"
+* [BC BREAK] Routes are now always added in the order of their registration (even for mounted routes)
+* Added run() on Route to be able to define the controller code
+* Deprecated TwigCoreExtension (register the new HttpFragmentServiceProvider instead)
+* Added HttpFragmentServiceProvider
+* Allowed a callback to be a method call on a service (before, after, finish, error, on Application; convert, before, after on Controller)
+
+1.1.3 (2013-XX-XX)
+------------------
+
+* Fixed translator locale management
+
+1.1.2 (2013-10-30)
+------------------
+
+* Added missing "security.hide_user_not_found" support in SecurityServiceProvider
+* Fixed event listeners that are registered after the boot via the on() method
+
+1.0.2 (2013-10-30)
+------------------
+
+* Fixed SecurityServiceProvider to use null as a fake controller so that routes can be dumped
+
 1.1.1 (2013-10-11)
 ------------------
 
@@ -28,7 +55,7 @@ Changelog
 
 * **2013-04-12**: Added support for validators as services.
 
-* **2013-04-01**: Added support for host matching with symfony 2.2:
+* **2013-04-01**: Added support for host matching with symfony 2.2::
 
       $app->match('/', function() {
           // app-specific action

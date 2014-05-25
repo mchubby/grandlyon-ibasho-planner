@@ -8,18 +8,21 @@
       <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.ie.css" />
   <![endif]-->
   <script src="//code.jquery.com/jquery-2.0.0.min.js"></script>
-  <!-- <link href='http://fonts.googleapis.com/css?family=Milonga' rel='stylesheet' type='text/css'> -->
   <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
   <link rel="stylesheet" href="vendor/Leaflet.awesome-markers-2.0-develop/dist/leaflet.awesome-markers.css">
   <link rel="stylesheet" href="vendor/Leaflet.contextmenu-master/dist/leaflet.contextmenu.css">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> <style type="text/css">
+
+  <!-- using 0.9.4+dev for bugfixes (issue #43 / commit 30fe926a28) -->
+  <link rel="stylesheet" href="vendor/Slidebars-0.9.4-30fe926a28/development/slidebars.css">
+  <!--<link rel="stylesheet" href="vendor/Slidebars-0.9.4/distribution/0.9.4/slidebars.min.css">-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <style type="text/css">
     body {
         padding: 0;
         margin: 0;
     }
-    html, body, #map {
+    html, body, #sb-site, #map {
         height: 100%;
-        /* font-family: 'Milonga', cursive; */
     }
     .leaflet-container .leaflet-control-zoom {
         margin-left: 13px;
@@ -114,16 +117,29 @@
       background: none repeat scroll 0 0 #444444;
       color: white;
     }
- 
-    #map { z-index: 1;}
+
+    /*#map { z-index: 1;}*/
+    .sb-slidebar {
+      background-color: #ffffff;
+      color: #8888cc;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
   </style>
- 
 </head>
 <body>
-  <div id="map"></div>
+  <div id="sb-site"><div id="map"></div></div>
+<div id="sb-pane" class="sb-slidebar sb-right sb-style-overlay sb-width-custom" data-sb-width="100%">
+</div>
+
   <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
+  <!--<script src="vendor/leaflet-src.js"></script>-->
   <script src="vendor/Leaflet.awesome-markers-2.0-develop/dist/leaflet.awesome-markers.js"></script>
   <script src="vendor/Leaflet.contextmenu-master/dist/leaflet.contextmenu-src.js"></script>
+  <!-- using 0.9.4+dev for bugfixes (issue #43 / commit 30fe926a28) -->
+  <script src="vendor/Slidebars-0.9.4-30fe926a28/development/slidebars.js"></script>
+  <!--<script src="vendor/Slidebars-0.9.4/distribution/0.9.4/slidebars.min.js"></script>-->
+
   <script>
 //#jquery dep here
     $.ajaxSetup({
@@ -279,8 +295,11 @@
                     sourceMarker.closePopup = sourceMarker._real_ClosePopup;
                     if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
                       sourceMarker.options.nodeInfo = data;
-                      sourceMarker.closePopup();
-                      sourceMarker.bindPopup("<b>Marker:</b> " + data.mta_title)
+                      sourceMarker.setPopupContent("Add to database successful");
+                      initializeMarkersPopups([sourceMarker]);
+                      
+                      document.getElementById('sb-pane').innerHTML = data.cached_form + '<button onclick="mySlidebars.close()">Close</button>';
+                      mySlidebars.open('right');
                     } else {
                       sourceMarker.closePopup();
                     }
@@ -347,6 +366,7 @@
     map.addControl(infowidget);
     map.addControl(new L.Control.Zoom())
 
+    var mySlidebars = null;
 
 
     function getPins(e){
@@ -356,20 +376,101 @@
       var url2 = "list/"+ georestr;
 //#jquery dep here
       $.get(url1, "json")
-      .done(function(parks) {
-        populateMarkerLayers({serverside: parks});
-        redrawMarkerLayers('serverside');
+      .done( function(parks, textStatus, jqXHR) {
+        if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
+          populateMarkerLayers({serverside: parks});
+          redrawMarkerLayers('serverside');
+        }
       });
       
       if (addPendingMarkers.length == 0) { // do not overwrite ondrag if pending markers have been placed
         $.get(url2, "json")
-        .done(function(list) {
-          populateMarkerLayers({pending: list});
-          redrawMarkerLayers('pending');
+        .done(function(list, textStatus, jqXHR) {
+          if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
+            populateMarkerLayers({pending: list});
+            redrawMarkerLayers('pending');
+          }
         });
       }
       
     }
+
+    function initializeMarkersPopups(lmarkerarr) {
+      $.each(lmarkerarr, function(i, lmarker) {
+        lmarker
+        .bindPopup("<b>Marker:</b> " + lmarker.options.nodeInfo.mta_title + "<div class='button-ctr'>" + 
+          "<div class='btn-edit button blue'>Edit</div> " + 
+          "</div>", {className: 'pending-popup'}
+        )
+        .on('popupopen', function (e) {
+          var sourceMarker = e.popup._source;
+//#jquery dep here
+          $('.btn-edit', e.popup._container).on('click', function () {
+            var $this = $(this)
+            $this.addClass('dark').removeClass('blue');
+            url = "edit/" + sourceMarker.options.nodeInfo._id;
+            $.get(url, "json", {timeout: 10})
+            .done( function(data, textStatus, jqXHR) {
+              if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
+                $.extend(sourceMarker.options.nodeInfo, data);
+                $container = $(document.getElementById('sb-pane'));
+                $container.html(data.cached_form + '<button onclick="mySlidebars.close()">Close</button>');
+                $('form', $container).submit(function(e) {
+                  e.preventDefault();
+                  submitHandler($(this))
+                  .done(function(resp, textStatus, jqXHR) { // POST ok
+                    $.extend(sourceMarker.options.nodeInfo, resp);
+                    sourceMarker.setPopupContent("Update successful");
+                    initializeMarkersPopups([sourceMarker]);
+                    mySlidebars.close();
+                  })
+                  .fail( function(jqXHR, textStatus, errorThrown) {
+                      $this.text("Retry ("+textStatus+"/"+jqXHR.status+")");
+                      if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
+                        try {
+                          var respObj = $.parseJSON(jqXHR.responseText);
+                          if(respObj.error) {
+                            $this.parent().append($("<div></div>").html(respObj.error));
+                          }
+                        } catch(e) {
+                        }
+                      }
+                      $this.css("color", 'red');
+                  })
+                });
+                mySlidebars.open('right');
+              }
+            })
+            .fail( function(jqXHR, textStatus, errorThrown) {
+                $this.text("Retry ("+textStatus+"/"+jqXHR.status+")");
+                if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
+                  try {
+                    var respObj = $.parseJSON(jqXHR.responseText);
+                    if(respObj.error) {
+                      $this.parent().append($("<div></div>").html(respObj.error));
+                    }
+                  } catch(e) {
+                  }
+                }
+                $this.css("color", 'red');
+            })
+          })
+        });        
+      });
+    }
+
+    function submitHandler($form) {
+      var values = {};
+      $.each($form.serializeArray(), function(i, field) {
+        values[field.name] = field.value;
+      });
+      return $.ajax({
+        type: $form.attr('method'),
+        url: $form.attr('action'),
+        data: values
+      })
+    }
+
 
     function populateMarkerLayers(layerdata){
       if ('serverside' in layerdata) {
@@ -388,9 +489,10 @@ serversideMarkers[i] = L.marker(map.options.center);
         addPendingMarkers = new Array(layerdata.pending.length)
         for (var i = 0; i < layerdata.pending.length; i++){
           var customInfo = layerdata.pending[i];
-          addPendingMarkers[i] = L.marker([customInfo.pos[1], customInfo.pos[0]], {icon: tmpIcon, nodeInfo: customInfo, committed: true})
-            .bindPopup("<b>Marker:</b> " + customInfo.mta_title)
+          addPendingMarkers[i] =
+          L.marker([customInfo.pos[1], customInfo.pos[0]], {icon: tmpIcon, nodeInfo: customInfo, committed: true})
         }
+        initializeMarkersPopups(addPendingMarkers);
       }
     }
     
@@ -413,7 +515,10 @@ serversideMarkers[i] = L.marker(map.options.center);
     redrawMarkerLayers()
     map.on('dragend', getPins);
     map.on('zoomend', getPins);
-    map.whenReady(getPins)
+    map.whenReady(function() {
+      getPins();
+      mySlidebars = new $.slidebars({siteClose: false});
+    });
 
   </script>
   <span id="fossribbon"><a href="https://openshift.redhat.com/app/console/application_types/custom?name=tclmap&initial_git_url=https%3A%2F%2Fgithub.com/mchubby/grandlyon-ibasho-planner.git&cartridges[]=php-5&cartridges[]=mongodb-2">Run me on OpenShift</a></span>
