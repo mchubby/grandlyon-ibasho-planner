@@ -182,22 +182,20 @@ $app->match('/edit/{reqid}', function (Request $request, $reqid) use ($app) {
         $form = $app['form.factory']->create($geopoi = new GeoPoiType($doc), null, array('action'=> 'edit/'.$doc['_id']));
         if ($request->getMethod() == 'POST') {
             $form->handleRequest($request);
-            if ($form->isSubmitted()) {
-                $savdoc = $geopoi->merge($form->getData());
-                $savdoc['_id'] = new MongoId($doc['_id']);
-                try {
-                    $result = $ugc_coll->save($savdoc);
-                    if ( !isset($result['ok']) || !$result['ok'] ) {
-                        throw new AppLevelException("Error saving to database (update), try again later", 503);
-                    }
-                    $doc = $ugc_coll->findOne(array('_id' => new MongoId($reqid)));
-                } catch ( MongoResultException $e ) {
-                    throw new AppLevelException("Error saving to database, try again later", 503, $e);
-                }
-
-                return $app->json($doc);
+            if (!$form->isSubmitted()) {
+                return $app->json(array("error"=>"Error in POST"), 500);
             }
-            return $app->json(array("error"=>"Error in POST"), 500);
+            $savdoc = $geopoi->merge($form->getData());
+            $savdoc['_id'] = new MongoId($doc['_id']);
+            try {
+                $result = $ugc_coll->save($savdoc);
+                if ( !isset($result['ok']) || !$result['ok'] ) {
+                    throw new AppLevelException("Error saving to database (update), try again later", 503);
+                }
+                $doc = $ugc_coll->findOne(array('_id' => new MongoId($reqid)));
+            } catch ( MongoResultException $e ) {
+                throw new AppLevelException("Error saving to database, try again later", 503, $e);
+            }
         }
     } catch ( AppLevelException $e ) {
         return $app->json(array("error"=> $e->getMessage() . ($e->getPrevious()?' -- '.$e->getPrevious()->getMessage() : '')), $e->getCode());
@@ -208,6 +206,7 @@ $app->match('/edit/{reqid}', function (Request $request, $reqid) use ($app) {
     } catch ( Exception $e ) {
         return $app->json(array("error"=>"The query failed for an unspecified reason. This might be a caused by a bug and/or a malformed request. You may want to notify the site administrator about it"), 500);
     }
+    $doc['_id'] = (string)$doc['_id'];
     $doc['cached_form'] = $app['twig']->render('ajaxform.twig', array(
 		'form' => $form->createView()
 	));
