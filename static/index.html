@@ -15,6 +15,8 @@
   <!-- using 0.9.4+dev for bugfixes (issue #43 / commit 30fe926a28) -->
   <link rel="stylesheet" href="vendor/Slidebars-0.9.4-30fe926a28/development/slidebars.css">
   <!--<link rel="stylesheet" href="vendor/Slidebars-0.9.4/distribution/0.9.4/slidebars.min.css">-->
+
+  <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.4.2/forms-min.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <style type="text/css">
     body {
@@ -124,6 +126,9 @@
       color: #8888cc;
       max-width: 100%;
       overflow-x: hidden;
+    }
+    .sb-slidebar > form {
+      margin: 5px 10px;
     }
   </style>
 </head>
@@ -298,7 +303,7 @@
                       sourceMarker.setPopupContent("Add to database successful");
                       initializeMarkersPopups([sourceMarker]);
                       
-                      document.getElementById('sb-pane').innerHTML = data.cached_form + '<button onclick="mySlidebars.close()">Close</button>';
+                      setupFormForMarker(sourceMarker, $this);
                       mySlidebars.open('right');
                     } else {
                       sourceMarker.closePopup();
@@ -394,6 +399,37 @@
       }
       
     }
+    
+    function setupFormForMarker(sourceMarker, $errorColl) {
+      $container = $(document.getElementById('sb-pane'));
+      $container.html(sourceMarker.options.nodeInfo.cached_form + '<button onclick="mySlidebars.close()">Close</button>');
+      $('form', $container)
+      .addClass('pure-form pure-form-stacked')
+      .submit(function(e) {
+        e.preventDefault();
+        submitHandler($(this))
+        .done(function(resp, textStatus, jqXHR) { // POST ok
+          $.extend(sourceMarker.options.nodeInfo, resp);
+          sourceMarker.setPopupContent("Update successful");
+          initializeMarkersPopups([sourceMarker]);
+          mySlidebars.close();
+        })
+        .fail( function(jqXHR, textStatus, errorThrown) {
+            $errorColl.text("Retry ("+textStatus+"/"+jqXHR.status+")");
+            if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
+              try {
+                var respObj = $.parseJSON(jqXHR.responseText);
+                if(respObj.error) {
+                  $errorColl.parent().append($("<div></div>").html(respObj.error));
+                }
+              } catch(e) {
+              }
+            }
+            $errorColl.css("color", 'red');
+        })
+      });
+      $('input, textarea', $container).addClass('pure-input-1');
+    }
 
     function initializeMarkersPopups(lmarkerarr) {
       $.each(lmarkerarr, function(i, lmarker) {
@@ -405,7 +441,9 @@
         .on('popupopen', function (e) {
           var sourceMarker = e.popup._source;
 //#jquery dep here
-          $('.btn-edit', e.popup._container).on('click', function () {
+          $('.btn-edit', e.popup._container).not('.btn-edit-initialized')
+          .addClass('btn-edit-initialized')
+          .on('click', function () {
             var $this = $(this)
             $this.addClass('dark').removeClass('blue');
             url = "edit/" + sourceMarker.options.nodeInfo._id;
@@ -413,31 +451,7 @@
             .done( function(data, textStatus, jqXHR) {
               if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
                 $.extend(sourceMarker.options.nodeInfo, data);
-                $container = $(document.getElementById('sb-pane'));
-                $container.html(data.cached_form + '<button onclick="mySlidebars.close()">Close</button>');
-                $('form', $container).submit(function(e) {
-                  e.preventDefault();
-                  submitHandler($(this))
-                  .done(function(resp, textStatus, jqXHR) { // POST ok
-                    $.extend(sourceMarker.options.nodeInfo, resp);
-                    sourceMarker.setPopupContent("Update successful");
-                    initializeMarkersPopups([sourceMarker]);
-                    mySlidebars.close();
-                  })
-                  .fail( function(jqXHR, textStatus, errorThrown) {
-                      $this.text("Retry ("+textStatus+"/"+jqXHR.status+")");
-                      if ( /json/.test(jqXHR.getResponseHeader('Content-Type')) ) {
-                        try {
-                          var respObj = $.parseJSON(jqXHR.responseText);
-                          if(respObj.error) {
-                            $this.parent().append($("<div></div>").html(respObj.error));
-                          }
-                        } catch(e) {
-                        }
-                      }
-                      $this.css("color", 'red');
-                  })
-                });
+                setupFormForMarker(sourceMarker, $this);
                 mySlidebars.open('right');
               }
             })
